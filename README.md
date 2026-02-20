@@ -11,10 +11,13 @@
 
 ## Instrucciones rápidas
 ------------------------
-1. LIS-E es un lenguaje interpretado cuya ejecución requiere como argumento un archivo `<nombre>.lis`. (Opcional compilar el intérprete Haskell con `ghc`)
-2. Para pruebas:
+1. Clonar el repositorio:
+    `git clone https://github.com/Andrenon/aus-2025-teoria-de-lenguajes`
+    `cd aus-2025-teoria-de-lenguajes`
+2. LIS-E es un lenguaje interpretado cuya ejecución requiere como argumento un archivo `<nombre>.lis`. (Opcional compilar el intérprete Haskell con `ghc`)
+3. Para pruebas:
     `ghci Main.hs`
-3. Ejecutar desde ghci:
+4. Ejecutar desde ghci:
     `run "test/test01.lis"`
     `run "test/test02.lis"`
     `...`
