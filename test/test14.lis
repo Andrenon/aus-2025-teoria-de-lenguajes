@@ -1,0 +1,2 @@
+/* Test 14 — Flujo 1 de propuesta original */
+step (" hola  MunDo  ") |> trim |> print |> lower |> print |> reverse |> print

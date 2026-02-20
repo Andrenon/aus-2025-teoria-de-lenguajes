@@ -1,0 +1,4 @@
+/* Test 6 — Aritmética básica */
+x := 10;
+y := 5;
+z := x + y * 2

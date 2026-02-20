@@ -1,0 +1,2 @@
+/* Test 2 — Pipeline simple */
+step("hola") |> print

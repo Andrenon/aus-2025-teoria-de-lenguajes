@@ -1,0 +1,5 @@
+/* Test 7 — Len y ToStr */
+x ::= "hola";
+l := len(x);
+s ::= toStr(l);
+step(s) |> print

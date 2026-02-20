@@ -1,0 +1,2 @@
+/* Test 10 — Variable no definida */
+step(x) |> print

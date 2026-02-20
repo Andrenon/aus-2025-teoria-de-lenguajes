@@ -1,0 +1,2 @@
+/* Test 12 — Pipe aplicado a comando sin flujo */
+x := 5 |> print

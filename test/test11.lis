@@ -1,0 +1,7 @@
+/* Test 11 — Repeat con logging */
+x := 0;
+repeat
+  x := x + 1;
+  step(toStr(x)) |> print
+until x = 3
+end

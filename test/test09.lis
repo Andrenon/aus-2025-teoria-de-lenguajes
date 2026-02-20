@@ -1,0 +1,4 @@
+/* Test 9 — División por cero */
+x := 10;
+y := 0;
+z := x / y

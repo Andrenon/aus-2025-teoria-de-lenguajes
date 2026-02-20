@@ -1,0 +1,5 @@
+/* Test 13 — Concatenación simple */
+x ::= "hola ";
+y ::= "mundo";
+z ::= x ++ y;
+step(z) |> print

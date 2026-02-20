@@ -1,0 +1,2 @@
+/* Test 3 — Pipeline encadenado */
+step(" hola  MunDo ") |> trim |> lower |> reverse |> print

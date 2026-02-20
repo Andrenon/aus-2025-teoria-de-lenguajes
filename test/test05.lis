@@ -1,0 +1,7 @@
+/* Test 5 — Con condicional */
+x ::= "hola";
+if len(x) = 4 then
+  step(x) |> print
+else
+  skip
+end
