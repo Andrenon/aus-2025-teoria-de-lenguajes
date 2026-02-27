@@ -1,4 +1,4 @@
-module Eval2 (eval, runProgram) where
+module Eval2 (runProgram) where
 
 import AST
 import Control.Monad.State (StateT, get, modify, runStateT)
@@ -69,7 +69,7 @@ updateVar x v = modify (update x v)
 -- EXPRESIONES ENTERAS
 ------------------------------------------------------------
 
-evalInt :: IntExp -> Eval Int
+evalInt :: IntExp -> Eval Integer
 
 evalInt (Const n) = return n
 
@@ -99,7 +99,7 @@ evalInt (Div a b) = do
      else return (x `div` y)
 
 evalInt (Len s) =
-  length <$> evalStr s
+  toInteger . length <$> evalStr s
 
 evalInt (ToInt s) = do
   str <- evalStr s

@@ -1,17 +1,15 @@
 module AST where
 
-import Data.Map.Strict (Map)
-
 type Variable = String
 
 data Value
-  = IntVal Int
+  = IntVal Integer
   | StrVal String
   deriving (Eq, Show)
 
 -- Integer expressions
 data IntExp
-  = Const Int
+  = Const Integer
   | Var Variable
   | UMinus IntExp
   | Plus IntExp IntExp
@@ -64,4 +62,3 @@ data PipeAction
   | ActSleep IntExp            -- sleep(intexp)
   deriving (Eq, Show)
 
-type Env = Map Variable Value

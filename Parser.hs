@@ -25,13 +25,10 @@ lis = makeTokenParser (emptyDef
     { commentStart    = "/*"
     , commentEnd      = "*/"
     , commentLine     = "//"
-    , identStart      = letter <|> char '_'
-    , identLetter     = alphaNum <|> oneOf "_'"
     , reservedNames   =
         [ "true","false"
         , "skip","if","then","else","end"
         , "repeat","until"
-        , "not"
         , "step"
         , "len","toInt","toStr"
         , "upper","lower","reverse","trim"
@@ -41,7 +38,7 @@ lis = makeTokenParser (emptyDef
         [ ":=","::=",";","|>","++"
         , "+","-","*","/"
         , "=","<",">"
-        , "&&","||"
+        , "&","|", "~"
         ]
     })
 
@@ -129,7 +126,7 @@ boolexp = chainl1 boolexp2 orop
 
 orop :: Parser (BoolExp -> BoolExp -> BoolExp)
 orop = do
-    reservedOp lis "||"
+    reservedOp lis "|"
     return Or
 
 boolexp2 :: Parser BoolExp
@@ -137,13 +134,13 @@ boolexp2 = chainl1 boolexp3 andop
 
 andop :: Parser (BoolExp -> BoolExp -> BoolExp)
 andop = do
-    reservedOp lis "&&"
+    reservedOp lis "&"
     return And
 
 boolexp3 :: Parser BoolExp
 boolexp3 =
         try (parens lis boolexp)
-    <|> try (do reserved lis "not"
+    <|> try (do reserved lis "~"
                 b <- boolexp3
                 return (Not b))
     <|> try intcomp

@@ -11,10 +11,10 @@
 
 ## Instrucciones rápidas
 ------------------------
-1. Clonar el repositorio:
+1. LIS-E es un lenguaje interpretado cuya ejecución requiere como argumento un archivo `<nombre>.lis`. (Opcional compilar el intérprete Haskell con `ghc`)
+2. Clonar el repositorio:
     `git clone https://github.com/Andrenon/aus-2025-teoria-de-lenguajes`
     `cd aus-2025-teoria-de-lenguajes`
-2. LIS-E es un lenguaje interpretado cuya ejecución requiere como argumento un archivo `<nombre>.lis`. (Opcional compilar el intérprete Haskell con `ghc`)
 3. Para pruebas:
     `ghci Main.hs`
 4. Ejecutar desde ghci:
@@ -24,8 +24,8 @@
 
 
 ## Descripción
---------------
-En este trabajo se presenta una extensión del lenguaje imperativo simple (LIS), denominada LIS-E, cuyo objetivo es incorporar:
+-------------
+En este trabajo se presenta una Extensión del Lenguaje Imperativo Simple (LIS), denominada LIS-E, cuyo objetivo es incorporar:
 - Soporte nativo para strings
 - Operadores de conversión entre enteros y strings
 - Operador de concatenación para strings (++)
@@ -33,19 +33,27 @@ En este trabajo se presenta una extensión del lenguaje imperativo simple (LIS),
     - A nivel de expresiones, como azúcar sintáctico para la composición funcional.
     - A nivel de comandos, como un constructor sintáctico que modela la aplicación de acciones con efectos sobre un flujo.
 - Comandos con _efectos_ observables sobre valores intermedios
-- Capturar _errores_ en tiempo de ejecución (semántica)
+- Capturar _errores_ en tiempo de ejecución
 
 Extensión del _dominio_ de valores:
 $$Val ::= Z ∪ String$$
 
-El programa completo es un comando. Semánticamente: 
-$$(c,σ) ⇓ (σ′, out, err)$$
+La semántica completa de LIS-E puede formalizarse como:
+$$(c,σ,τ)⇓(res,σ′,τ′)$$
 donde:
-- c: es el comando a ejecutar
-- σ, σ′: estado inicial y final, respectivamente
-- out: representa los efectos observables acumulados
-- err: indica la posible ocurrencia de un error dinámico
-La evaluación de un programa produce un nuevo estado junto con su comportamiento observable y el eventual reporte de error.
+- c: Comando a ejecutar
+- σ, σ′: Estado inicial y final, respectivamente
+- τ, τ′: Log inicial y final, respectivamente
+- res: Resultado de la ejecución. El resultado puede ser:
+    - Error abortivo
+    - Ejecución normal sin flujo
+    - Ejecución normal con flujo
+Ahora bien como el Log modela un efecto interno del programa (traza observable para depuración), se considera que si dos programas producen: 
+- mismo estado final, 
+- mismo resultado,
+pero distinto log, eso no cambia el comportamiento interno del programa. Por lo tanto el log no forma parte del núcleo semántico y las reglas semánticas se especifican:
+$$(c,σ)⇓(res,σ′)$$
+
 
 Se mantiene que:
 > Todo programa válido en LIS es válido en LIS-E y tiene la misma semántica. $(LIS ⊆ LIS-E)$
@@ -141,28 +149,28 @@ Este constructor:
 
 ### Expresiones enteras nuevas
 #### E-Len
-$$\frac {⟨s,σ⟩⇓_{strexp}w}{⟨len(s),σ⟩⇓_{intexp}∣w∣}$$
+$$\frac {⟨s,σ⟩⇓_{strexp}w​}{⟨len(s),σ⟩⇓_{intexp}∣w∣}$$
 
 #### E-ToInt
-$$\frac {⟨s,σ⟩⇓_{strexp}w\ \ \ \ parse(w)=n}{⟨toInt(s),σ⟩⇓_{intexp}n}$$
+$$\frac {⟨s,σ⟩⇓_{strexp}w\ \ \ \ parse(w)=n​}{⟨toInt(s),σ⟩⇓_{intexp}n}$$
 
 ### Expresiones string
 #### E-String
-$$\frac {}{⟨^"c^",σ⟩⇓_{strexp}\ ^"c^"}$$
+$$\frac {}{⟨^"c^",σ⟩⇓_{strexp}\ ^"c^"​}$$
 
 #### E-SVar
-$$\frac {σ(s)=w}{⟨s,σ⟩⇓_{strexp}w}$$
+$$\frac {σ(s)=w​}{⟨s,σ⟩⇓_{strexp}w}$$
 
 #### E-ToStr
-$$\frac {⟨e,σ⟩⇓_{intexp}n}{⟨toStr(e),σ⟩⇓_{strexp}str(n)}$$
+$$\frac {⟨e,σ⟩⇓_{intexp}n\ \ \ \ str(n)=w​}{⟨toStr(e),σ⟩⇓_{strexp}w}$$
 
 #### E-Concat
-$$\frac {⟨s1,σ⟩⇓_{strexp}w1\ \ \ \ ⟨s2,σ⟩⇓_{strexp}w2}{⟨s1++s2,σ⟩⇓_{strexp}w1⋅w2}$$
+$$\frac {​⟨s1​,σ⟩⇓_{strexp}w1​\ \ \ \ ⟨s2​,σ⟩⇓_{strexp}w2​​}{⟨s1​++s2​,σ⟩⇓_{strexp}w1​⋅w2}$$
 
 ### Pipe a nivel de expresiones
 Azúcar sintáctica: `s∣>f ≡ f(s)`
 #### E-Pipe
-$$\frac {⟨s,σ⟩⇓w}{⟨s∣>f,σ⟩⇓_{strexp}Ff(w)}$$
+$$\frac {⟨s,σ⟩⇓w​​​}{⟨s∣>f,σ⟩⇓_{strexp}Ff​(w)}$$
 Donde:
 |filtro|función matemática|
 |---|---|
@@ -173,23 +181,52 @@ Donde:
 
 ### Comandos
 #### C-SAssign
-$$\frac {⟨s,σ⟩⇓_{strexp}w}{⟨x::=s,σ⟩⇝⟨skip,σ[x↦w]⟩}$$
+$$\frac {⟨s,σ⟩⇓_{strexp}w​​​}{⟨x::=s,σ⟩⇝⟨skip,σ[x↦w]⟩}$$
 
 #### C-Step
-$$\frac {⟨s,σ⟩⇓_{strexp}w}{⟨step(s),σ⟩⇝⟨pipe(w,0),σ⟩}$$
+$$\frac {⟨s,σ⟩⇓_{strexp}w​​​}{⟨step(s),σ⟩⇝⟨pipe(w,0),σ⟩}$$
 Inicia un flujo observable.
 
 ### Pipe a nivel de comandos
 Constructor semántico: `c |> a` introduce una acción con efectos sobre un flujo activo.
 
 #### C-Pipe-Filter
-$$\frac { }{⟨pipe(w,k)∣>f,σ⟩⇝⟨pipe(Ff(w),k+1),σ⟩}$$
+$$\frac { ​​​}{⟨pipe(w,k)∣>f,σ⟩⇝⟨pipe(Ff​(w),k+1),σ⟩}$$
 
 #### C-Print
-$$\frac { }{⟨pipe(w,k)∣>print,σ⟩⇝⟨pipe(w,k+1),σ⟩}$$
+$$\frac { ​​​}{⟨pipe(w,k)∣>print,σ⟩⇝⟨pipe(w,k+1),σ⟩}$$
 
 #### C-Sleep
-$$\frac {⟨e,σ⟩⇓_{intexp}n}{⟨pipe(w,k)∣>sleep(e),σ⟩⇝⟨pipe(w,k+1),σ⟩}$$
+$$\frac {⟨e,σ⟩⇓_{intexp}n​}{⟨pipe(w,k)∣>sleep(e),σ⟩⇝⟨pipe(w,k+1),σ⟩}$$
+
+#### C-Pipe-End
+$$\frac{} {⟨pipe(w,k),σ⟩ ⇝ ⟨skip,σ⟩}$$
+
+### Errores
+#### E-Var-Undefined
+$$\frac{x\notin dom(σ)}{⟨x,σ⟩⇓error}$$
+
+#### E-Var-Type-Int
+$$\frac{σ(x) = StrVal(w)} {⟨x,σ⟩ ⇓_{intexp} error}$$
+“Se esperaba entero”
+
+#### E-SVar-Type-Err
+$$\frac{σ(x) = IntVal(n)} {⟨x,σ⟩ ⇓_{strexp} error}$$“Se esperaba string”
+
+#### (E-Div-Zero)
+$$\frac{ ⟨a,σ⟩⇓ n_1 \quad ⟨b,σ⟩⇓ 0 } {⟨a / b,σ⟩ ⇓ error}$$
+
+#### E-ToInt-Err
+$$\frac{⟨s,σ⟩ ⇓_{strexp} w \quad parse(w)\;falla} {⟨toInt(s),σ⟩ ⇓ error}$$
+
+#### C-Pipe-NoFlow
+$$\frac{ (c,σ) ⇓ (Nothing,σ') } { ⟨c |> a,σ⟩ ⇝ ⟨error,σ'⟩ }$$
+"Pipe aplicado a comando sin flujo"
+
+#### C-Pipe-Err
+Si una acción del pipeline produce error:
+$$\frac{⟨a(w),σ⟩ ⇓ error} {⟨pipe(w,k) |> a,σ⟩ ⇝ ⟨error,σ⟩}$$
+
 
 
 ## Explicación coloquial de las extensiones
