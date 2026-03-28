@@ -54,6 +54,13 @@ Ahora bien como el Log modela un efecto interno del programa (traza observable p
 pero distinto log, eso no cambia el comportamiento interno del programa. Por lo tanto el log no forma parte del núcleo semántico y las reglas semánticas se especifican:
 $$(c,σ)⇓(res,σ′)$$
 
+Relaciones de evaluación:
+- enteros: 
+  $$⇓_{int} \subseteq (IntExp × Σ) × (ℤ ∪ \{err_i\})$$
+- strings: 
+  $$⇓_{str} \subseteq (StrExp × Σ) × (String ∪ \{err_s\})$$
+- comandos: 
+  $$⇓_{comm} \subseteq (Comm × Σ) × ((Σ × (ℤ × String))) ∪ \{err_c\})$$
 
 Se mantiene que:
 > Todo programa válido en LIS es válido en LIS-E y tiene la misma semántica. $(LIS ⊆ LIS-E)$
@@ -131,14 +138,13 @@ pipe_action ::= strfilter
               | comm_effect
 
 comm_effect ::= 'print'
-              | 'sleep(' intexp ')'
+              | 'sleep(' intexp ')' | '('strexp ')'
 ```
 
 ## Semántica formal
 -------------------
-Se respeta:
-- Expresiones → big-step (⇓)
-- Comandos → small-step (⇝)
+Se introduce un nuevo comando intermedio:
+  `pipe(w,k)`
 
 Se introduce un nuevo comando intermedio:
 	`pipe(w,k)`
@@ -147,31 +153,44 @@ Este constructor:
 - es interno de la semántica
 - representa pipeline en ejecución (w = valor actual, k = número de pasos ejecutados)
 
+
 ### Expresiones enteras nuevas
 #### E-Len
-$$\frac {⟨s,σ⟩⇓_{strexp}w​}{⟨len(s),σ⟩⇓_{intexp}∣w∣}$$
+$$\frac {⟨s,σ⟩⇓_{strexp}w}{⟨len(s),σ⟩⇓_{intexp}∣w∣}$$
 
 #### E-ToInt
-$$\frac {⟨s,σ⟩⇓_{strexp}w\ \ \ \ parse(w)=n​}{⟨toInt(s),σ⟩⇓_{intexp}n}$$
+reads:String⇀Z
+_Es "parcial" porque no todas las cadenas tienen una correspondencia numérica (ej. "hola" no tiene imagen en $\mathbb{Z}$, por lo que devuelve indefinido, denotado como $\bot$ ($w \notin dom(reads)$))._
+$$\frac {⟨s,σ⟩⇓_{strexp}w\ \ \ \ reads(w)=n}{⟨toInt(s),σ⟩⇓_{intexp}n}$$
+Opción con idea de implementación:
+$$\frac { }{⟨ϵ,n⟩⇓n}$$
+$$\frac {⟨s,σ⟩⇓_{strexp}w\ \ \ \ ⟨w,0⟩⇝∗⟨ϵ,n⟩}{⟨toInt(s),σ⟩⇓_{intexp}n}$$
+
+#### E-ToInt-Err
+reads:String⇀Z
+$$\frac {⟨s,σ⟩⇓_{strexp}w\ \ \ \ reads(w)=\bot}{⟨toInt(s),σ⟩⇓_{intexp}⟨err_i,σ⟩}$$
 
 ### Expresiones string
 #### E-String
-$$\frac {}{⟨^"c^",σ⟩⇓_{strexp}\ ^"c^"​}$$
+$$\frac {}{⟨s,σ⟩⇓_{strexp}\ s}$$
 
 #### E-SVar
-$$\frac {σ(s)=w​}{⟨s,σ⟩⇓_{strexp}w}$$
+$$\frac { }{⟨s,σ⟩⇓_{strexp}σ\ s}$$
 
 #### E-ToStr
-$$\frac {⟨e,σ⟩⇓_{intexp}n\ \ \ \ str(n)=w​}{⟨toStr(e),σ⟩⇓_{strexp}w}$$
+$$\frac {⟨e,σ⟩⇓_{intexp}n\ \ \ \ str(n)=w}{⟨toStr(e),σ⟩⇓_{strexp}w}$$
 
 #### E-Concat
-$$\frac {​⟨s1​,σ⟩⇓_{strexp}w1​\ \ \ \ ⟨s2​,σ⟩⇓_{strexp}w2​​}{⟨s1​++s2​,σ⟩⇓_{strexp}w1​⋅w2}$$
+$$\frac {⟨s1,σ⟩⇓_{strexp}w1\ \ \ \ ⟨s2,σ⟩⇓_{strexp}w2}{⟨s1++s2,σ⟩⇓_{strexp}w1⋅w2}$$
 
 ### Pipe a nivel de expresiones
 Azúcar sintáctica: `s∣>f ≡ f(s)`
+
 #### E-Pipe
-$$\frac {⟨s,σ⟩⇓w​​​}{⟨s∣>f,σ⟩⇓_{strexp}Ff​(w)}$$
+$$\frac {⟨s,σ⟩⇓w}{⟨s∣>f,σ⟩⇓_{strexp}F_f(w)}$$
+
 Donde:
+
 |filtro|función matemática|
 |---|---|
 |upper|uppercase(w)|
@@ -179,54 +198,65 @@ Donde:
 |reverse|reverse(w)|
 |trim|removeSpaces(w)|
 
+**El Pipeline en Small-Step:**
+$$\frac{\langle s, \sigma \rangle \rightarrow \langle s', \sigma \rangle}{\langle s \mid> f, \sigma \rangle \rightarrow \langle s' \mid> f, \sigma \rangle}$$
+_"Si el lado izquierdo no es un valor, evalúar un paso"_
+$$\frac{}{\langle w \mid> f, \sigma \rangle \rightarrow \langle F_f(w), \sigma \rangle}$$
+_"Si el lado izquierdo ya es un string evaluado ($w$), aplicar el filtro matemático"._
+
 ### Comandos
 #### C-SAssign
-$$\frac {⟨s,σ⟩⇓_{strexp}w​​​}{⟨x::=s,σ⟩⇝⟨skip,σ[x↦w]⟩}$$
+$$\frac {⟨s,σ⟩⇓_{strexp}w}{⟨x::=s,σ⟩⇝⟨skip,σ[x↦w]⟩}$$
 
 #### C-Step
-$$\frac {⟨s,σ⟩⇓_{strexp}w​​​}{⟨step(s),σ⟩⇝⟨pipe(w,0),σ⟩}$$
+$$\frac {⟨s,σ⟩⇓_{strexp}w}{⟨step(s),σ⟩⇝⟨pipe(w,0),σ⟩}$$
 Inicia un flujo observable.
 
 ### Pipe a nivel de comandos
 Constructor semántico: `c |> a` introduce una acción con efectos sobre un flujo activo.
 
 #### C-Pipe-Filter
-$$\frac { ​​​}{⟨pipe(w,k)∣>f,σ⟩⇝⟨pipe(Ff​(w),k+1),σ⟩}$$
+$$\frac { }{⟨pipe(w,k)∣>f,σ⟩⇝⟨pipe(F_f(w),k+1),σ⟩}$$
 
 #### C-Print
-$$\frac { ​​​}{⟨pipe(w,k)∣>print,σ⟩⇝⟨pipe(w,k+1),σ⟩}$$
+$$\frac { }{⟨pipe(w,k)∣>print,σ⟩ \overset{w!\ k!}{\rightsquigarrow} ⟨pipe(w,k),σ⟩}$$
 
 #### C-Sleep
-$$\frac {⟨e,σ⟩⇓_{intexp}n​}{⟨pipe(w,k)∣>sleep(e),σ⟩⇝⟨pipe(w,k+1),σ⟩}$$
+$$\frac {⟨e,σ⟩⇓_{intexp}n}{⟨pipe(w,k)∣>sleep(e),σ⟩⇝⟨pipe(w,k+1),σ⟩}$$
 
 #### C-Pipe-End
 $$\frac{} {⟨pipe(w,k),σ⟩ ⇝ ⟨skip,σ⟩}$$
 
+
 ### Errores
 #### E-Var-Undefined
-$$\frac{x\notin dom(σ)}{⟨x,σ⟩⇓error}$$
+$$\frac{x\notin dom(σ)}{⟨x,σ⟩⇓⟨error,σ⟩}$$
+"Variable no definida"
 
 #### E-Var-Type-Int
-$$\frac{σ(x) = StrVal(w)} {⟨x,σ⟩ ⇓_{intexp} error}$$
+$$\frac{σ(x) \in String} {⟨x,σ⟩ ⇓_{intexp} ⟨err_i,σ⟩}$$
 “Se esperaba entero”
 
 #### E-SVar-Type-Err
-$$\frac{σ(x) = IntVal(n)} {⟨x,σ⟩ ⇓_{strexp} error}$$“Se esperaba string”
+$$\frac{σ(x) \in \mathbb{Z}} {⟨x,σ⟩ ⇓_{strexp} ⟨err_s,σ⟩}$$
+“Se esperaba string”
 
 #### (E-Div-Zero)
-$$\frac{ ⟨a,σ⟩⇓ n_1 \quad ⟨b,σ⟩⇓ 0 } {⟨a / b,σ⟩ ⇓ error}$$
-
-#### E-ToInt-Err
-$$\frac{⟨s,σ⟩ ⇓_{strexp} w \quad parse(w)\;falla} {⟨toInt(s),σ⟩ ⇓ error}$$
+$$\frac{ ⟨a,σ⟩⇓ n_1 \quad ⟨b,σ⟩⇓ 0 } {⟨a \div b,σ⟩ ⇓_{intexp} ⟨err_i,σ⟩}$$
 
 #### C-Pipe-NoFlow
-$$\frac{ (c,σ) ⇓ (Nothing,σ') } { ⟨c |> a,σ⟩ ⇝ ⟨error,σ'⟩ }$$
+$$\frac{ ⟨c,σ⟩ ⇓ ⟨skip,σ'⟩ } { ⟨c |> a,σ⟩ ⇝ ⟨err_c,σ'⟩ }$$
 "Pipe aplicado a comando sin flujo"
 
 #### C-Pipe-Err
 Si una acción del pipeline produce error:
-$$\frac{⟨a(w),σ⟩ ⇓ error} {⟨pipe(w,k) |> a,σ⟩ ⇝ ⟨error,σ⟩}$$
+$$\frac{ F_f(w) = \bot } {⟨pipe(w,k) |> f,σ⟩ ⇝ ⟨err_c,σ⟩}$$
 
+#### C-Seq-Err
+$$\frac{⟨c_0,σ⟩ ⇝ ⟨err_c,σ'⟩} {⟨c_0 ; c_1,σ⟩ ⇝ ⟨err_c,σ'⟩}$$
+
+#### C-Error-Terminal
+$$\frac{} {⟨error,σ⟩ ⇝ ⟨error,σ⟩}$$
 
 
 ## Explicación coloquial de las extensiones
@@ -265,7 +295,7 @@ Suspende la ejecución n segundos sin modificar el valor.
 ## Conclusión
 -------------
 
-LIS-E constituye una extensión conservativa del Lenguaje Imperativo Simple (LIS), incorporando soporte nativo para strings y un mecanismo explícito de flujo mediante pipelines. 
+LIS-E constituye una extensión conservativa del Lenguaje Imperativo Simple (LIS), incorporando soporte nativo para strings y un mecanismo explícito de flujo mediante pipelines.
 
 La extensión no altera la semántica de los programas válidos en LIS, preservando así la compatibilidad hacia atrás (LIS ⊆ LIS-E). No obstante, amplía el dominio semántico del lenguaje al incorporar efectos observables y manejo explícito de errores como parte del resultado de evaluación.
 

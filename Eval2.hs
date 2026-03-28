@@ -79,27 +79,31 @@ evalInt (Var x) = do
     IntVal n -> return n
     _        -> throwError "Se esperaba entero"
 
-evalInt (UMinus e) =
-  negate <$> evalInt e
+evalInt (UMinus e) = do val <- evalInt e
+                        return (negate val)
 
-evalInt (Plus a b) =
-  (+) <$> evalInt a <*> evalInt b
+evalInt (Plus l r) = do lval <- evalInt l
+                        rval <- evalInt r
+                        return (lval + rval)
 
-evalInt (Minus a b) =
-  (-) <$> evalInt a <*> evalInt b
+evalInt (Minus l r) = do lval <- evalInt l
+                         rval <- evalInt r
+                         return (lval - rval)
 
-evalInt (Times a b) =
-  (*) <$> evalInt a <*> evalInt b
+evalInt (Times l r) = do lval <- evalInt l
+                         rval <- evalInt r
+                         return (lval * rval)
 
-evalInt (Div a b) = do
-  x <- evalInt a
-  y <- evalInt b
-  if y == 0
+evalInt (Div l r) = do
+  lval <- evalInt l
+  rval <- evalInt r
+  if rval == 0
      then throwError "División por cero"
-     else return (x `div` y)
+     else return (div lval rval)
 
-evalInt (Len s) =
-  toInteger . length <$> evalStr s
+evalInt (Len s) = do str <- evalStr s
+                     let longitud = length str
+                     return (toInteger longitud)
 
 evalInt (ToInt s) = do
   str <- evalStr s
@@ -121,25 +125,27 @@ evalStr (SVar x) = do
     StrVal s -> return s
     _        -> throwError "Se esperaba string"
 
-evalStr (Concat a b) =
-  (++) <$> evalStr a <*> evalStr b
+evalStr (Concat a b) = do strA <- evalStr a
+                          strB <- evalStr b
+                          return (strA ++ strB)
 
 evalStr (PipeStr s f) = do
   v <- evalStr s
   applyFilter f v
 
-evalStr (ToStr e) =
-  show <$> evalInt e
+evalStr (ToStr e) = do n <- evalInt e
+                       return (show n)
 
 ------------------------------------------------------------
 -- FILTROS
 ------------------------------------------------------------
 
 applyFilter :: StrFilter -> String -> Eval String
-applyFilter Upper   = return . map toUpper
-applyFilter Lower   = return . map toLower
-applyFilter Reverse = return . reverse
-applyFilter Trim    = return . filter (not . isSpace)
+applyFilter Upper str   = return (map toUpper str)
+applyFilter Lower str   = return (map toLower str)
+applyFilter Reverse str = return (reverse str)
+applyFilter Trim str    = return (filter (not . isSpace) str)
+
 
 ------------------------------------------------------------
 -- EXPRESIONES BOOLEANAS
@@ -150,23 +156,28 @@ evalBool :: BoolExp -> Eval Bool
 evalBool BTrue  = return True
 evalBool BFalse = return False
 
-evalBool (Eq a b) =
-  (==) <$> evalInt a <*> evalInt b
+evalBool (Eq a b) = do valA <- evalInt a
+                       valB <- evalInt b
+                       return (valA == valB)
 
-evalBool (Lt a b) =
-  (<) <$> evalInt a <*> evalInt b
+evalBool (Lt a b) = do valA <- evalInt a
+                       valB <- evalInt b
+                       return (valA < valB)
 
-evalBool (Gt a b) =
-  (>) <$> evalInt a <*> evalInt b
+evalBool (Gt a b) = do valA <- evalInt a
+                       valB <- evalInt b
+                       return (valA > valB)
 
-evalBool (And a b) =
-  (&&) <$> evalBool a <*> evalBool b
+evalBool (And a b) = do valA <- evalBool a
+                        valB <- evalBool b
+                        return (valA && valB)
 
-evalBool (Or a b) =
-  (||) <$> evalBool a <*> evalBool b
+evalBool (Or a b) = do valA <- evalBool a
+                       valB <- evalBool b
+                       return (valA || valB)
 
-evalBool (Not a) =
-  not <$> evalBool a
+evalBool (Not a) = do valA <- evalBool a
+                      return (not valA)
 
 ------------------------------------------------------------
 -- COMANDOS
@@ -220,7 +231,7 @@ applyPipeAction (PipeVal v k) (ActFilter f) = do
 
 applyPipeAction (PipeVal v k) ActPrint = do
   tell [(k,v)]
-  return (Just (PipeVal v (k+1)))
+  return (Just (PipeVal v (k)))
 
 applyPipeAction (PipeVal v k) (ActSleep _) =
   return (Just (PipeVal v (k+1)))
